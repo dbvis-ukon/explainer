@@ -1,0 +1,105 @@
+<link rel="import" href="../paper-material/paper-material.html">
+<link rel="import" href="../tf-imports/d3.html">
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../iron-icons/iron-icons.html">
+
+<link rel="import" href="../explainer-common/jquery.html">
+
+<link rel="import" href="../diagnosis-toolbar/diagnosis-tool-verbalization.html">
+<link rel="import" href="../diagnosis-toolbar/tools.html">
+
+<style>
+    .window-button-container {
+        position: absolute;
+        right: 10px;
+        top: 10px;
+        display: block;
+    }
+
+    .window-button {
+        margin: 0 0 0 10px;
+        float: right;
+        padding: unset;
+        max-width: 16px;
+        max-height: 16px;
+        min-width: 0;
+        min-height: 0;
+    }
+
+    .diagnosis-tool-verbalization-card{
+        height: 27vh;
+    }
+
+</style>
+
+<dom-module id="diagnosis-tool-verbalization-card">
+    <template>
+        <template id="diagnosisToolSvgDomIf" is="dom-if" if="{{_isValidSelection(selectedTool, selectedNode)}}">
+            <paper-material elevation="1" class="card">
+                <div class="window-button-container">
+                    <paper-button class="window-button"
+                                  on-click="_minimizeClicked">
+                        <iron-icon icon="arrow-downward" class="button-icon"></iron-icon>
+                    </paper-button>
+                </div>
+
+                <diagnosis-tool-verbalization
+                        selected-tool="[[selectedTool]]"
+                        selected-node="[[selectedNode]]"
+                        tensor-dataset="[[tensorDataset]]"
+                ></diagnosis-tool-verbalization>
+            </paper-material>
+        </template>
+    </template>
+</dom-module>
+
+
+<script>
+    "use strict";
+
+    (function () {
+        Polymer({
+            is: 'diagnosis-tool-verbalization-card',
+
+            properties: {
+                tensorDataset: Object,
+                selectedNode: {
+                    type: String,
+                },
+                selectedTool: {
+                    type: diagnosis.tools.Tool,
+                },
+                _imageSelectionLastClicked: {
+                    type: String,
+                    value: "",
+                }
+            },
+            observers: [
+                '_selectionChanged(selectedTool)',
+            ],
+            attached() {
+                // Dis good for debug.
+                //this.set('selectedNode', 'dense_hidden/bias_1');
+                //this.set('selectedTool', diagnosis.tools.Tool.WEIGHTS_HISTOTREND);
+            },
+            _selectionChanged(selectedTool, selectedNode) {
+
+            },
+            _minimizeClicked() {
+                const visSVGElement = $("#diagnosis-tool-verb-svg")[0];
+                const polymerProvenanceBar = $("provenance-bar")[0];
+
+                if (visSVGElement && polymerProvenanceBar) {
+                    polymerProvenanceBar._pushSVG(visSVGElement);
+                }
+            },
+            _isValidSelection: function (selectedTool) {
+                if(selectedTool) {
+                    return true;
+                }
+                else return false;
+            },
+        })
+        ;
+    })();
+</script>

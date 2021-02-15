@@ -1,0 +1,167 @@
+<link rel="import" href="../paper-button/paper-button.html">
+<link rel="import" href="../paper-item/paper-item.html">
+<link rel="import" href="../iron-icons/iron-icons.html">
+<link rel="import" href="../iron-icons/av-icons.html">
+<link rel="import" href="../iron-icons/communication-icons.html">
+<link rel="import" href="../iron-icons/device-icons.html">
+<link rel="import" href="../iron-icons/editor-icons.html">
+<link rel="import" href="../iron-icons/hardware-icons.html">
+<link rel="import" href="../iron-icons/image-icons.html">
+<link rel="import" href="../iron-icons/maps-icons.html">
+<link rel="import" href="../iron-icons/notification-icons.html">
+<link rel="import" href="../iron-icons/social-icons.html">
+<link rel="import" href="../iron-icons/places-icons.html">
+
+<link rel="import" href="../diagnosis-toolbar/tools.html">
+
+<dom-module id="diagnosis-toolbar">
+    <template>
+        <style>
+            .explainer-button {
+                font-weight: normal;
+                text-transform: none;
+                padding: unset;
+                margin: unset;
+                justify-content: left;
+                width: 90%;
+            }
+
+            .button-icon {
+                width: 20px;
+                height: 20px;
+            }
+
+            .button-text {
+                margin-left: 8px;
+            }
+
+            .tool-class-title {
+                font-size: 16px;
+                padding-bottom: 8px;
+                color: grey;
+            }
+
+            .tool-class-table {
+                border: none;
+                padding: unset;
+                margin: unset;
+                border-spacing: unset;
+            }
+
+            .tool-class-container {
+                margin-bottom: 16px;
+            }
+
+            .tool-button-container .icon-button {
+                margin: 0;
+                padding: 0;
+                text-transform: none;
+            }
+            
+
+            /* sizing of dropdown for tool selection */
+            .dropdown-content{
+                width: 21vw;
+                max-width: 300px;
+            }
+
+        </style>
+
+        <template is="dom-repeat" items="[[_toolCategoriesShadowed]]" as="toolCategory">
+            <div class="tool-class-container">
+                <div id="category-{{toolCategory}}"
+                class="tool-class-title"
+                >{{_getCategoryName(toolCategory)}}</div>
+
+                 <!-- replace individual tool entries by dropdown -->
+                <paper-dropdown-menu no-label-float
+                                    no-animations
+                                    noink
+                                    horizontal-align="center"
+                                    class="run-dropdown"
+                                    >
+                    <paper-menu id="{{toolCategory}}" 
+                                class="dropdown-content"
+                                selected="0"
+                                slot="dropdown-content"
+                                >                                            
+                        <template is="dom-repeat" 
+                                    items="{{_getToolsInCategory(toolCategory)}}" 
+                                    as="tool">
+                            <paper-button class="explainer-button"
+                                            on-click="_toolClicked"  
+                                            style="{{_style(tool, selectedTool)}}">
+                                <iron-icon icon="{{_getToolIcon(tool)}}" class="button-icon"></iron-icon>
+                                <span class="button-text">{{_getToolName(tool)}}</span>
+                            </paper-button>
+                        </template>
+                    </paper-menu>
+                </paper-dropdown-menu> 
+
+            </div>
+        </template>
+        <!--<br />
+        <div class="tool-button-container">
+          <paper-button class="icon-button" on-click="_goToRefine" style="">
+              <iron-icon icon="device:data-usage" class="button-icon"></iron-icon>
+              <span class="button-text">Support me Refine</span>
+          </paper-button>
+        </div>-->
+    </template>
+</dom-module>
+
+<script>
+    Polymer({
+        is: 'diagnosis-toolbar',
+        properties: {
+            _toolCategoriesShadowed: {
+                value: diagnosis.tools.AllToolCategories,
+            },
+            selectedTool: {
+                type: diagnosis.tools.Tool,
+                notify: true,
+            },
+        },
+        _goToRefine: function()
+        {
+            window.location.href = '#refinement';
+        },
+        _toolClicked: function (toolEvent) {
+
+            const tool = toolEvent.model.get('tool');
+
+            if (tool === this.selectedTool) {
+                this.set('selectedTool', diagnosis.tools.Tool.NONE);
+            } else {
+                this.set('selectedTool', tool);
+            }
+
+            //color selected category & set font bold
+            let d3hand = d3.select("#category-"+diagnosis.tools.getToolSpec(tool).category);
+            d3hand.style("font-weight","bold").style("color",diagnosis.tools.getToolSpec(tool).color);        
+        },
+        _style: function (tool, selectedTool) {
+            if (tool === selectedTool) {
+                return "font-weight: bold;color:" + diagnosis.tools.getToolSpec(tool).color + ";";
+            }
+
+            //remove color & bold font from unselected category
+            let d3hand = d3.select("#category-"+diagnosis.tools.getToolSpec(tool).category);
+            d3hand.style("font-weight","unset").style("color","grey");
+
+            return "color:" + diagnosis.tools.getToolSpec(tool).color + ";";
+        },
+        _getToolName(tool) {
+            return diagnosis.tools.getToolSpec(tool).name;
+        },
+        _getToolIcon(tool) {
+            return diagnosis.tools.getToolSpec(tool).icon;
+        },
+        _getCategoryName(toolCategory) {
+            return diagnosis.tools.getToolCategorySpec(toolCategory).name;
+        },
+        _getToolsInCategory(toolCategory) {
+            return diagnosis.tools.getToolCategorySpec(toolCategory).tools;
+        },
+    });
+</script>

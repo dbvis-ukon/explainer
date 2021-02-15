@@ -1,0 +1,86 @@
+<link rel="import" href="../tf-imports/d3.html">
+<link rel="import" href="../polymer/polymer.html">
+
+<link rel="import" href="../diagnosis-toolbar/tools.html">
+
+<dom-module id="diagnosis-tool-visualization">
+    <template>
+<!--         <svg width="480" height="270" viewBox="0 0 480 270" id="diagnosis-tool-svg" preserveAspectRatio="xMinYMin"
+ --> 
+        <svg width="100%" height="100%" viewBox="0 0 480 270" id="diagnosis-tool-svg" preserveAspectRatio="xMinYMin"
+        xmlns='http://www.w3.org/2000/svg'></svg>
+    </template>
+</dom-module>
+
+
+<script>
+    "use strict";
+
+    (function () {
+        Polymer({
+            is: 'diagnosis-tool-visualization',
+
+            properties: {
+                tensorDataset: Object,
+                selectedRun: {
+                    type: String,
+                    readonly: true,
+                },
+                selectedNode: {
+                    type: String,
+                    readonly: true,
+                },
+                selectedTool: {
+                    type: diagnosis.tools.Tool,
+                    readonly: true,
+                },
+                _isAttached: Object,
+                showImageSelection: {
+                    type: Boolean,
+                    notify: true,
+                },
+            },
+            observers: [
+                '_attributesChanged(selectedNode, selectedTool, tensorDataset)'
+            ],
+            attached: function () {
+                this.set('_isAttached', true);
+                this._renderVisualization();
+            },
+            _attributesChanged(selectedNode, selectedTool, tensorDataset) {
+                this._renderVisualization()
+            },
+            _renderVisualization: function () {
+                if (this._isAttached) {
+                    const selectedRun = this.selectedRun;
+                    const selectedNode = this.selectedNode;
+                    const selectedTool = this.selectedTool;
+                    const tensorDataset = this.tensorDataset;
+                    const imageUrl = this.imageUrl;
+
+                    const tensor = diagnosis.tools.getTensor(tensorDataset, selectedNode);
+                    const toolSpec = diagnosis.tools.getToolSpec(selectedTool);
+
+                    diagnosis.tools.clearVisSVG();
+
+                    if ([diagnosis.tools.ToolCategory.GRAD, diagnosis.tools.ToolCategory.LRP, diagnosis.tools.ToolCategory.GLOBAL].includes(toolSpec.category)) {
+                        this.showImageSelection = true;
+                    } else {
+                        if (tensor) {
+                            switch (selectedTool) {
+                                case diagnosis.tools.Tool.WEIGHTS_MINMAX:
+                                    diagnosis.tools.weights.minMax(tensor, selectedRun, selectedNode);
+                                    break;
+                                case diagnosis.tools.Tool.WEIGHTS_HISTOTREND:
+                                    diagnosis.tools.weights.histoTrend(tensor, selectedRun, selectedNode);
+                                    break;
+                                default:
+                                    break;
+                            }
+                        }
+                    }
+                }
+            },
+        });
+    })();
+</script>

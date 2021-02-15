@@ -1,0 +1,376 @@
+<!--
+@license
+Copyright 2016 The TensorFlow Authors. All Rights Reserved.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+    http://www.apache.org/licenses/LICENSE-2.0
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<link rel="import" href="../iron-icon/iron-icon.html">
+<link rel="import" href="../paper-input/paper-input.html">
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../tf-backend/tf-backend.html">
+<link rel="import" href="../tf-categorization-utils/tf-categorization-utils.html">
+<link rel="import" href="../tf-categorization-utils/tf-category-pane.html">
+<link rel="import" href="../tf-dashboard-common/dashboard-style.html">
+<link rel="import" href="../tf-dashboard-common/tf-dashboard-layout.html">
+<link rel="import" href="../tf-runs-selector/tf-runs-selector.html">
+<link rel="import" href="../tf-tensorboard/registry.html">
+
+<link rel="import" href="../diagnosis-graph/diagnosis-graph.html">
+<link rel="import" href="../diagnosis-toolbar/diagnosis-toolbar.html">
+<link rel="import" href="../explainer-common/no-data-warning.html">
+<link rel="import" href="../diagnosis-toolbar/diagnosis-tool-visualization-card.html">
+<link rel="import" href="../diagnosis-toolbar/diagnosis-tool-verbalization-card.html">
+<link rel="import" href="../diagnosis-toolbar/tools.html">
+
+<dom-module id="diagnosis-dashboard">
+    <template>
+        <style include="dashboard-style"></style>
+        <style>
+            /* Disable automatic upper-case conversion of button captions. */
+            paper-button {
+                text-transform: none;
+            }
+
+            .vertical {
+                width: 100%;
+                height: 100%;
+                @apply --layout-vertical;
+            }
+
+            .title {
+                font-size: 16px;
+                margin-bottom: 5px;
+                color: black;
+            }
+
+            .control-holder {
+                margin: 8px 8px 8px 8px;
+                border: 1px solid grey;
+                padding: 8px 8px 8px 8px;
+            }
+
+            .sidebar {
+                margin: unset;
+            }
+
+            .auto {
+                @apply --layout-flex-auto;
+                @apply --layout-vertical;
+            }
+
+            .run-dropdown {
+                width: 100%;
+            }
+
+            .diagnosis-tool-card-holder {
+                position: absolute;
+                display: flex;
+                flex-direction: column;
+                right: 5px;
+                top: 5px;
+                padding: 0;
+                width:45vh;
+                max-width: 640px;
+                max-height: 360px;
+            }
+
+            .diagnosis-tool-card {
+                background-color: rgba(255, 255, 255, 1);
+            }
+
+            .context-menu {
+                position: absolute;
+                display: none;
+                background-color: #e2e2e2;
+                border-radius: 2px;
+                font-size: 14px;
+                min-width: 150px;
+                border: 1px solid #d4d4d4;
+            }
+
+            /deep/ .context-menu ul {
+                list-style-type: none;
+                margin: 0;
+                padding: 0;
+                cursor: default;
+            }
+
+            /deep/ .context-menu ul li {
+                padding: 4px 16px;
+            }
+
+            /deep/ .context-menu ul li:hover {
+                background-color: #f3913e;
+                color: white;
+            }
+        </style>
+
+        <template is="dom-if" if="[[_datasetsEmpty(_graphDatasets)]]">
+            <diagnosis-ndw></diagnosis-ndw>
+        </template>
+        <template is="dom-if" if="[[!_datasetsEmpty(_graphDatasets)]]">
+            <tf-dashboard-layout>
+                <div class="sidebar">
+                    <div class="control-holder runs">
+                        <div class="title">Run <span class="counter">[[[_graphDatasets.length]]]</span></div>
+                        <paper-dropdown-menu no-label-float
+                                             no-animations
+                                             noink
+                                             horizontal-align="center"
+                                             class="run-dropdown">
+                            <paper-menu id="select" class="dropdown-content" selected="{{ _selectedDataset }}"
+                                        slot="dropdown-content">
+                                <template is="dom-repeat" items="[[_graphDatasets]]">
+                                    <paper-item>[[item.name]]</paper-item>
+                                </template>
+                            </paper-menu>
+                        </paper-dropdown-menu>
+                    </div>
+                    <div class="control-holder">
+                        <diagnosis-toolbar selected-tool="{{ _selectedTool }}"></diagnosis-toolbar>
+                    </div>
+                </div>
+                <div class="center">
+                    <div class="vertical">
+                        <diagnosis-graph id="diagnosis-graph" class="auto"
+                                         selected-node="{{ _selectedNode }}"
+                                         selected-tool="{{ _selectedTool }}"
+                                         graph-datasets="[[_graphDatasets]]"
+                                         selected-dataset="[[_selectedDataset]]"
+                        ></diagnosis-graph>
+                        <div class="context-menu"></div>
+
+                        <!-- Wait for _selectedTensorDataset to load before showing iNNspector. -->
+                        <template is="dom-if" if="{{ _selectedTensorDataset }}">
+                            <div class="diagnosis-tool-card-holder">
+                                <diagnosis-tool-visualization-card
+                                        class="diagnosis-tool-card"
+                                        selected-node="[[_selectedNode]]"
+                                        selected-tool="[[_selectedTool]]"
+                                        tensor-dataset="[[_selectedTensorDataset]]"
+                                        graph-hierarchy="[[_graphHierarchy]]"
+                                        selected-run="[[_run]]"
+                                ></diagnosis-tool-visualization-card>
+                                <diagnosis-tool-verbalization-card
+                                        class="diagnosis-tool-card"
+                                        selected-node="[[_selectedNode]]"
+                                        selected-tool="[[_selectedTool]]"
+                                        tensor-dataset="[[_selectedTensorDataset]]"
+                                        graph-hierarchy="[[_graphHierarchy]]"
+                                ></diagnosis-tool-verbalization-card>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </tf-dashboard-layout>
+        </template>
+    </template>
+</dom-module>
+
+<script>
+    "use strict";
+
+    /**
+     * The (string) name for the run of the selected dataset in the graph dashboard.
+     */
+    const DIAGNOSIS_RUN_STORAGE_KEY = 'explainer_run';
+
+    Polymer({
+        is: "diagnosis-dashboard",
+        properties: {
+            _requestManager: {
+                type: Object,
+                value: () => new tf_backend.RequestManager(),
+            },
+            _graphDatasets: Array,
+            _tensorDatasets: Array,
+            _selectedDataset: {
+                type: Number,
+                value: -1,
+            },
+            _selectedTensorDataset: Object, // Shadows _tensorDatasets[_selectedDataset] because array items can't be passed as Polymer parameters.
+            _initialized: {
+                type: Boolean,
+                value: false,
+            },
+            _isAttached: {
+                type: Boolean,
+                value: false,
+            },
+            _run: {
+                type: String,
+                notify: true,
+                value: tf_storage.getStringInitializer(
+                    DIAGNOSIS_RUN_STORAGE_KEY, {
+                        defaultValue: '',
+                        useLocalStorage: false,
+                    }),
+                observer: '_runObserver',
+            },
+            _selectedNode: {
+                type: String,
+                value: "",
+            },
+            _selectedTool: {
+                type: diagnosis.tools.Tool,
+                value: diagnosis.tools.Tool.NONE,
+            },
+        },
+        observers: [
+            '_maybeInitializeDashboard(_isAttached)',
+            '_determineSelectedDataset(_graphDatasets, _run)',
+            '_updateSelectedDatasetName(_graphDatasets, _selectedDataset)',
+            '_tensorDatasetsUpdated(_tensorDatasets, _run)',
+        ],
+        attached: function () {
+            this.set('_isAttached', true);
+            //remove mouse tooltip
+            this.setAttribute('title','')
+        },
+        detached: function () {
+            this.set('_isAttached', false);
+        },
+        reload() {
+        },
+        _tensorDatasetsUpdated(tensorDatasets, run) {
+            if (tensorDatasets) {
+                // By default, load the first dataset.
+                if (!run) {
+                    // By default, load the first dataset.
+                    this.set('_selectedTensorDataset', 0);
+                    return;
+                }
+
+                // If the URL specifies a dataset, load it.
+                const dataset = tensorDatasets.findIndex(d => d.run_name === run);
+                if (dataset === -1) {
+                    // Tell the user if the dataset cannot be found to avoid misleading
+                    // the user.
+                    const dialog = this.$$('#error-dialog');
+                    dialog.textContent =
+                        `No dataset named "${run}" could be found.`;
+                    dialog.open();
+                    return;
+                }
+
+                this.set('_selectedTensorDataset', tensorDatasets[dataset]["run_data"]);
+            }
+        },
+        _graphUrl(run, limitAttrSize, largeAttrsKey) {
+            const demoMode = tf_backend.getRouter().isDemoMode();
+            const optional = (p) => (p != null && !demoMode || undefined) && p;
+            return tf_backend.getRouter().pluginRoute(
+                'explainer',
+                '/graph',
+                new URLSearchParams({
+                    'run': run,
+                    'limit_attr_size': optional(limitAttrSize),
+                    'large_attrs_key': optional(largeAttrsKey),
+                }),
+                /* demoCustomExt */ '.pbtxt');
+        },
+        _fetchGraphRuns() {
+            return this._requestManager.request(
+                tf_backend.getRouter().pluginRoute('explainer', '/runs'));
+        },
+        _fetchRunMetadataTags() {
+            return this._requestManager.request(
+                tf_backend.getRouter().pluginRoute('explainer', '/run_metadata_tags'));
+        },
+        _fetchTensorDatasets() {
+            return this._requestManager.request(
+                tf_backend.getRouter().pluginRoute('explainer', '/weights'));
+        },
+        _maybeInitializeDashboard: function (isAttached) {
+            if (this._initialized || !isAttached) {
+                // Either this dashboard is already initialized ... or we are not yet ready to initialize.
+                return;
+            }
+
+            // Set this to true so we only initialize once.
+            this._initialized = true;
+
+            // Fetch graph data
+            Promise.all([this._fetchGraphRuns(), this._fetchRunMetadataTags()])
+                .then(result => {
+                    const runsWithGraph = result[0].sort(vz_sorting.compareTagNames);
+                    const runToMetadata = result[1];
+                    const datasets = _.map(runsWithGraph, runName => ({
+                        name: runName,
+                        path: this._graphUrl(
+                            runName, diagnosis.graph.LIMIT_ATTR_SIZE, diagnosis.graph.LARGE_ATTRS_KEY),
+                        runMetadata: _.map(
+                            (runToMetadata[runName] || []).sort(vz_sorting.compareTagNames),
+                            tag => ({
+                                tag: tag,
+                                path: tf_backend.addParams(
+                                    tf_backend.getRouter().pluginRoute('diagnosis', '/run_metadata'),
+                                    {tag: tag, run: runName}),
+                            })),
+                    }));
+                    this.set('_graphDatasets', datasets);
+                });
+
+            // Fetch weigt data
+            this._fetchTensorDatasets()
+                .then(result => {
+                    this.set('_tensorDatasets', result);
+                    console.log("### TENSOR DATASETS LOADED ###", this._tensorDatasets);
+                });
+        },
+        _determineSelectedDataset(graphDatasets, run) {
+            if (!this._datasetsEmpty(graphDatasets)) {
+                // By default, load the first dataset.
+                if (!run) {
+                    // By default, load the first dataset.
+                    this.set('_selectedDataset', 0);
+                    return;
+                }
+
+                // If the URL specifies a dataset, load it.
+                const dataset = graphDatasets.findIndex(d => d.name === run);
+                if (dataset === -1) {
+                    // Tell the user if the dataset cannot be found to avoid misleading
+                    // the user.
+                    const dialog = this.$$('#error-dialog');
+                    dialog.textContent =
+                        `No dataset named "${run}" could be found.`;
+                    dialog.open();
+                    return;
+                }
+
+                this.set('_selectedDataset', dataset);
+            }
+        },
+        _updateSelectedDatasetName(graphDatasets, selectedDataset) {
+            if (!this._datasetsEmpty(graphDatasets)) {
+                this.set('_run', graphDatasets[selectedDataset].name);
+            }
+        },
+        _datasetsEmpty: function (graphDatasets) {
+            return !graphDatasets || !graphDatasets.length;
+        },
+        _runObserver: tf_storage.getStringObserver(
+            DIAGNOSIS_RUN_STORAGE_KEY, {
+                defaultValue: '',
+                polymerProperty: '_run',
+                useLocalStorage: false,
+            }),
+    });
+
+    tf_tensorboard.registerDashboard({
+        plugin: 'diagnosis',
+        backendPlugin: 'explainer',
+        elementName: 'diagnosis-dashboard',
+        tabName: "DIAGNOSIS",
+    });
+
+</script>

@@ -1,0 +1,164 @@
+<link rel="import" href="../paper-material/paper-material.html">
+<link rel="import" href="../paper-slider/paper-slider.html">
+<link rel="import" href="../paper-spinner/paper-spinner-lite.html">
+<link rel="import" href="../tf-imports/d3.html">
+<link rel="import" href="../polymer/polymer.html">
+
+<link rel="import" href="../understanding-toolbar/tools.html">
+
+<dom-module id="understanding-tool-vis">
+
+    <template>
+        <style>
+            /*adapt size and font for wiki dialog*/
+            .dialog-content {
+                overflow: auto;
+                /*max-height: 60vh;*/
+                max-height: 30vh;
+                /*width: 50vw;*/
+                
+                font-size: calc(.3em + 1vh);
+            }
+
+            #dialog {
+                position: fixed;
+                top: -5px;
+                left: 0px;
+                width: 50%;
+            }
+            /* adapting size & font for wiki entries, preventing potential blocking of minimap */ 
+            #understanding-tool-div{
+                max-height: 15vh;
+                overflow-y: auto;
+                font-size: calc(.2em + 1vh);
+                padding-right: 1vh;
+                padding-left: 1vh;
+                background: white;
+                transition: max-height .5s ease;
+            }
+            #understanding-tool-svg {
+                display: none;
+            }
+            understanding-tool-vis {
+                display: none;
+            }
+            #moreWiki{
+                padding: 5px;
+                margin: 1vh 0px 1vh 1vh;
+            }
+            .wiki-content{
+                background: white;
+            }
+        </style>
+        <paper-dialog id="dialog">
+            <div class="dialog-content">
+
+            </div>
+            <div class="buttons">
+                <paper-button dialog-confirm autofocus>Tap me to close</paper-button>
+            </div>
+        </paper-dialog>
+        <div class="wiki-content">
+            <div id="understanding-tool-div">
+            </div>
+            <paper-button raised id="moreWiki" on-click="_toggleWiki">More</paper-button>
+        </div>
+<!--         <svg id="understanding-tool-svg">            
+        </svg> -->
+
+    </template>
+</dom-module>
+
+
+<script>
+    "use strict";
+
+    (function()
+    {
+        Polymer(
+        {
+            is: 'understanding-tool-vis',
+
+            properties:
+            {
+                selectedNode:
+                {
+                    type: String,
+                },
+                selectedTool:
+                {
+                    type: understanding.tools.Tool,
+                },
+                _isAttached:
+                {
+                    type: Boolean,
+                    value: false
+                },
+                isMoreWiki:
+                {
+                    type: Boolean,
+                    value: false,
+                }
+            },
+            observers: [
+                '_attributesChanged(selectedNode, selectedTool)',
+            ],
+            attached: function()
+            {
+                this.set('_isAttached', true);
+                this._renderVisualization();
+            },
+            _attributesChanged()
+            {
+                this._renderVisualization();
+            },
+            _renderVisualization: function()
+            {
+                if (this._isAttached)
+                {
+//                    understanding.tools.clearSVG();
+//                    understanding.tools.clearDIV();
+
+                    const selectedNode = this.selectedNode;
+                    const selectedTool = this.selectedTool;
+
+                    switch (selectedTool)
+                    {
+                        case understanding.tools.Tool.WIKI:
+                            d3.select("understanding-tool-vis").style("display","unset");
+                            console.log("loading wiki full", this.isMoreWiki);
+                            if(this.isMoreWiki)
+                                understanding.tools.wiki.getWiki(selectedNode,true);
+
+                            else
+                                understanding.tools.wiki.getWiki(selectedNode,false);
+                            break;
+                        default:
+                            d3.select("understanding-tool-vis").style("display","none");
+                            break;
+                    }
+                }
+            },
+            _toggleWiki: function(){
+                if(this.isMoreWiki){
+                    d3.select("#understanding-tool-div").style("max-height","15vh");
+                    d3.select("#moreWiki").text("MORE");
+
+                    understanding.tools.wiki.getWiki(this.selectedNode,false);
+                    
+                    this.isMoreWiki = false;        
+                }else{
+                    d3.select("#understanding-tool-div").style("max-height","55vh");
+                    d3.select("#moreWiki").text("LESS");
+
+                    understanding.tools.wiki.getWiki(this.selectedNode,true);
+
+                    this.isMoreWiki = true;        
+                }
+                
+                //console.log("clickclick")
+
+            }
+        });
+    })();
+</script>

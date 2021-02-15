@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Title of the document</title>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/5.6.0/math.min.js"></script>
+</head>
+
+<body>
+
+    <script>
+        function imgToRaw(img, targetWidth, targetHeight)
+        {
+            // Create an empty canvas element
+            const canvas = document.createElement("canvas");
+            canvas.width = img.width;
+            canvas.height = img.height;
+
+            // Copy the image contents to the canvas
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0);
+
+            // Get image data
+            return ctx.getImageData(0, 0, targetWidth, targetHeight);
+        }
+
+        const explainerURL = 'http://127.0.0.1:5000/gradient';
+
+        const modelArchitecturePromise = $.get("test_img/architecture.json");
+        const modelPromise = $.ajax(
+        {
+            url: "test_img/model.h5",
+            cache: false,
+            xhrFields:
+            {
+                responseType: 'blob'
+            }
+        });
+
+        // const modelPromise = new Promise(function(resolve, reject)
+        // {
+        //     var xhr = new XMLHttpRequest();
+        //     xhr.open("GET", "test_img/model.h5", true);
+        //     //Now set response type
+        //     xhr.responseType = 'blob';
+        //     xhr.addEventListener('load', function()
+        //     {
+        //         if (xhr.status === 200)
+        //         {
+        //             resolve(xhr.response);
+        //         }
+        //     });
+        //     xhr.send()
+        // });
+
+        Promise.all([modelArchitecturePromise, modelPromise]).then(([modelArchitecture, model]) =>
+        {
+            console.log('test0');
+
+            const img = new Image();
+            img.onload = () =>
+            {
+                console.log('test1');
+
+                const imgWidth = 299;
+                const imgHeight = 299;
+
+                const imgRaw = imgToRaw(img, imgWidth, imgHeight);
+
+                // Convert image data from UInt8ClampedArray to JS array.
+                const imgRawArray = Array.from(imgRaw.data);
+
+                // Discard alpha channel.
+                let inputImage = math.reshape(imgRawArray, [imgRawArray.length / 4, 4]);
+                inputImage = math.resize(inputImage, [imgRawArray.length / 4, 3]);
+
+                // Reshape to input layer size [batch, width, height, channels].
+                inputImage = math.reshape(inputImage, [1, imgWidth, imgHeight, 3]);
+
+                // Scale from [0, 255] to [0, 1].
+                inputImage = math.divide(inputImage, 255);
+
+                // Now we have everything. Image data, model and model architecture. Now explain!
+                const fd = new FormData;
+                fd.append("architecture", JSON.stringify(modelArchitecture));
+                fd.append("data", JSON.stringify(inputImage));
+                fd.append("model", model, 'model');
+
+                console.log();
+
+                const xhr = new XMLHttpRequest();
+                xhr.open("POST", explainerURL, true);
+
+                //Send the proper header information along with the request
+                // xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+                xhr.setRequestHeader('Access-Control-Allow-Origin', '*');
+
+                xhr.send(fd);
+
+                console.log('test3');
+            };
+            // img.crossOrigin = "Anonymous"; // TODO: Remove cross-origin ignore
+            img.src = "test_img/04-03-2019-17-36-51-lrp.jpg";
+        });
+    </script>
+
+</body>
+
+</html>

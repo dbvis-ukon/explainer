@@ -1,0 +1,70 @@
+<link rel="import" href="../paper-material/paper-material.html">
+<link rel="import" href="../paper-slider/paper-slider.html">
+<link rel="import" href="../paper-spinner/paper-spinner-lite.html">
+<link rel="import" href="../tf-imports/d3.html">
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../iron-icons/iron-icons.html">
+
+<link rel="import" href="../explainer-common/jquery.html">
+<link rel="import" href="../refinement/refinement-recommendation-card.html">
+<link rel="import" href="../refinement/recommendation-contents.html">
+
+<style>
+    .refinement-recommendation-card-s {
+        background-color: white;
+        border: 1px solid grey;
+        display: inline-block;
+        vertical-align: top;
+        margin: 20px;
+    }
+
+    .tool-button-container .icon-button {
+        margin: 0;
+        padding: 0;
+        text-transform: none;
+    }
+</style>
+
+<dom-module id="refinement-recommendations">
+    <template>
+        <template is="dom-repeat" items="{{_recommendationContentIDs}}" as="recommendationContentID">
+            <refinement-recommendation-card content-id="[[recommendationContentID]]" class="refinement-recommendation-card-s">
+            </refinement-recommendation-card>
+        </template>
+        <!--<div class="tool-button-container">
+          <paper-button class="icon-button" on-click="_goToReport" style="">
+              <iron-icon icon="device:data-usage" class="button-icon"></iron-icon>
+              <span class="button-text">Report what I did</span>
+          </paper-button>
+        </div>-->
+    </template>
+</dom-module>
+
+
+<script>
+    "use strict";
+
+    (function () {
+        Polymer({
+            is: 'refinement-recommendations',
+
+            properties: {
+                _recommendationCards: {
+                    type: Array,
+                    value: [],
+                }
+            },
+            observers: [],
+            attached() {
+            },
+            ready() {
+                this._recommendationContentIDs = refinement.recommendations.allRecommendations;
+            },
+            _goToReport: function()
+            {
+                window.location.href = '#reporting';
+            }
+        })
+        ;
+    })();
+</script>

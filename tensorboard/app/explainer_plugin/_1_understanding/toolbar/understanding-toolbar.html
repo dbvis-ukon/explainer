@@ -1,0 +1,139 @@
+<link rel="import" href="../paper-button/paper-button.html">
+<link rel="import" href="../paper-item/paper-item.html">
+<link rel="import" href="../iron-icons/iron-icons.html">
+<link rel="import" href="../iron-icons/av-icons.html">
+<link rel="import" href="../iron-icons/communication-icons.html">
+<link rel="import" href="../iron-icons/device-icons.html">
+<link rel="import" href="../iron-icons/editor-icons.html">
+<link rel="import" href="../iron-icons/hardware-icons.html">
+<link rel="import" href="../iron-icons/image-icons.html">
+<link rel="import" href="../iron-icons/maps-icons.html">
+<link rel="import" href="../iron-icons/notification-icons.html">
+<link rel="import" href="../iron-icons/social-icons.html">
+<link rel="import" href="../iron-icons/places-icons.html">
+
+<link rel="import" href="../understanding-toolbar/tools.html">
+
+<dom-module id="understanding-toolbar">
+    <template>
+        <style>
+            .icon-button {
+                font-weight: normal;
+                text-transform: none;
+                padding: unset;
+                margin: unset;
+            }
+
+            .button-text {
+                margin-left: 8px;
+            }
+
+            .tool-class-title {
+                font-size: 16px;
+                padding-bottom: 8px;
+                color: grey;
+            }
+
+            .tool-class-table {
+                border: none;
+                padding: unset;
+                margin: unset;
+                border-spacing: unset;
+            }
+
+            #understanding-tool-div .h1 {
+                font-size: 25px;
+            }
+
+            #understanding-tool-div {
+                padding: 15px;
+            }
+
+
+        </style>
+        <div class="tool-class-container">
+            <div class="tool-class-title">Understanding</div>
+            <table class="tool-class-table">
+                <template is="dom-repeat" items="[[_toolsShadowed]]" as="tool">
+                    <tr>
+                        <td>
+                            <paper-button class="icon-button" on-click="_toolClicked" style="{{_style(tool, selectedTool)}}">
+                                <iron-icon icon="{{_getToolIcon(tool)}}" class="button-icon"></iron-icon>
+                                <span class="button-text">{{_getToolName(tool)}}</span>
+                            </paper-button>
+                        </td>
+                    </tr>
+                </template>
+            </table>
+        </div>
+        <div>
+          <br />
+          <br />
+        </div>
+        <div class="tool-class-container">
+            <table class="tool-class-table">
+                <tr>
+                    <td>
+                        <paper-button class="icon-button" on-click="_goToDiagnosis" style="">
+                            <iron-icon icon="device:data-usage" class="button-icon"></iron-icon>
+                            <span class="button-text">Add some Data</span>
+                        </paper-button>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </template>
+</dom-module>
+
+<script>
+    Polymer(
+    {
+        is: 'understanding-toolbar',
+        properties:
+        {
+            _toolsShadowed:
+            {
+                value: understanding.tools.AllTools,
+            },
+            selectedTool:
+            {
+                type: understanding.tools.Tool,
+                notify: true,
+            },
+        },
+        _goToDiagnosis: function()
+        {
+            window.location.href = '#diagnosis';
+        },
+        _toolClicked: function(toolEvent)
+        {
+            const tool = toolEvent.model.get('tool');
+
+            if (tool === this.selectedTool)
+            {
+                this.set('selectedTool', understanding.tools.Tool.NONE);
+            }
+            else
+            {
+                this.set('selectedTool', tool);
+            }
+        },
+        _style: function(tool, selectedTool)
+        {
+            if (tool === selectedTool)
+            {
+                return "font-weight: bold;color:" + understanding.tools.getToolSpec(tool).color + ";";
+            }
+
+            return "color:" + understanding.tools.getToolSpec(tool).color + ";";
+        },
+        _getToolName(tool)
+        {
+            return understanding.tools.getToolSpec(tool).name;
+        },
+        _getToolIcon(tool)
+        {
+            return understanding.tools.getToolSpec(tool).icon;
+        },
+    });
+</script>
