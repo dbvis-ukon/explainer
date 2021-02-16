@@ -64,7 +64,7 @@ T. Spinner, U. Schlegel, H. Schafer, and M. El-Assady, “explAIner: A Visual An
 ### BibTeX
 
 ```
-@ARTICLE{SpinnerEtAl2019,
+@ARTICLE{SpinnerEtAl2020,
   author = {Thilo Spinner and Udo Schlegel and Hanna Schäfer and Mennatallah El-Assady},
   title = {{explAIner}: A Visual Analytics Framework for Interactive and Explainable Machine Learning},
   journal = {{IEEE} Transactions on Visualization and Computer Graphics},
