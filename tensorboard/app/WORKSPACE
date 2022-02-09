@@ -159,9 +159,9 @@ tf_workspace()
 
 git_repository(
     name = "org_tensorflow_tensorboard",
-    branch = "1.12",
+    branch = "tensorboard-1.12-explainer",
     init_submodules = True,
-    remote = "https://github.com/spinthil/tensorboard.git",
+    remote = "https://github.com/dbvis-ukon/explainer.git",
 )
 
 load("@org_tensorflow_tensorboard//third_party:workspace.bzl", "tensorboard_workspace")
