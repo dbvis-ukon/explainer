@@ -31,8 +31,7 @@ routes = Blueprint('routes', __name__,
 
 @routes.route('/')
 def home():
-    return render_template('base.html')
-
+    return jsonify(success=True)
 
 # TODO: cache model and data
 def get_explanation(explainer, params):
